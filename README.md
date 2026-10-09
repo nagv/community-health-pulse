@@ -75,11 +75,11 @@ The reproducible sample is in **data/synthetic_visits.csv**. Its seed is 42; it 
 
 ## Test and quality checks
 ```powershell
-.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m pytest -q --cov
 .venv\Scripts\python.exe -m ruff check .
 .venv\Scripts\python.exe -m backend.smoke_check
 ```
-The smoke check is an optional real, potentially billable OpenRouter tool call. It exits with a clear skip message if no key is configured. Unit/integration tests run without a live model.
+The smoke check is an optional real, potentially billable OpenRouter tool call. It exits with a clear skip message if no key is configured. Unit/integration tests run without a live model. `--cov` reports coverage and fails below 95% (configured in pyproject.toml; the live smoke check is excluded).
 
 ## Separate deployments
 See frontend/README.md and backend/README.md. Docker build contexts are the repository root. For a local two-container example, create backend/.env and run:

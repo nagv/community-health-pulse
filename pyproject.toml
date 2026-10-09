@@ -3,5 +3,15 @@ pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.coverage.run]
+source = ["backend", "frontend", "shared"]
+# Optional live, billable check; exercised manually rather than in unit tests.
+omit = ["backend/smoke_check.py"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_empty = true
+
 [tool.ruff]
 line-length = 110
