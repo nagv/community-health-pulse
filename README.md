@@ -35,11 +35,11 @@ If script execution is restricted, use the equivalent Python commands in the fro
 
 ## Try it
 1. Select **Load demo dataset**.
-2. Explore the Overview charts and change locality, date, condition or age filters.
-3. Open **Explore Data** to inspect condition counts and paginated records.
+2. Explore the Overview KPIs and charts. In the sidebar, pick a quick range (e.g. Last 30 days) or From/To dates, adjust locality, condition or age, then press **Apply filters**. Visit counts show the change against the equally long period before the selection.
+3. Open **Explore Data** to inspect condition counts and page through records with Previous/Next.
 4. With an OpenRouter key configured, open **Ask the Data**.
 5. Ask: “Which recorded conditions account for the most visits? Show a chart.”
-6. Inspect **Analysis details** and **View calculations and applied filters**.
+6. Open **View calculations and applied filters** under the answer; the **Current selection** card shows the filters new questions will use.
 7. Ask a follow-up with explicit dates: “Compare Fever visits during 2026-07-01 to 2026-07-07 against 2026-07-08 to 2026-07-14.”
 8. Switch datasets and observe that the conversation resets.
 
@@ -63,7 +63,7 @@ The reproducible sample is in **data/synthetic_visits.csv**. Its seed is 42; it 
 - Tools: summary, top conditions, visit trend, period comparison, group breakdown and chart creation.
 - Charts reference a previous tool result; the model cannot provide arbitrary values.
 - Week 1 uses one LangChain agent. RAG, multi-agent orchestration and local-model training belong to later weeks.
-- Six logical model calls, twelve tool calls, 60-second request deadline, two SDK retries for transient provider errors, and 1,400 output tokens per model call. Retries can make additional provider attempts.
+- Six logical model calls, twelve tool calls, 60-second request deadline, a 15-second timeout and one SDK retry per model call (so a retried call still fits the deadline), and 1,400 output tokens per model call. Retries can make additional provider attempts.
 - At most 12 conversation messages are sent per request. Only aggregate tool results and question/history are sent to OpenRouter; visit records and visit IDs are not sent by tools.
 - Dashboard condition/locality displays show the top 50 groups with an explicit notice when truncated. Tool summaries show at most 50 groups; trend responses show at most 100 periods. Charts use stored computed results. Weekly buckets start on Monday. Trend timelines are clipped to the available dataset date range.
 - Comparison periods are inclusive and must not overlap. They replace UI date limits, while other filters persist. Percent change is undefined at a zero baseline; visit shares are computed within each period.
