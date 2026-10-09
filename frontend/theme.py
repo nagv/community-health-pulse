@@ -66,24 +66,29 @@ h3 { font-size: 1.1rem; }
 [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
   background: #16838d; border-color: #36a6ad;
 }
-[data-testid="stSidebar"] .stButton button {
+[data-testid="stSidebar"] .stButton button,
+[data-testid="stSidebar"] .stFormSubmitButton button {
   background: #fff; color: #174b59; border: 1px solid #d0e3e8;
   min-height: 2.7rem; font-weight: 600;
 }
 [data-testid="stSidebar"] button [data-testid="stMarkdownContainer"] { color: inherit; }
 [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p { color: #c7dfe4; }
 [data-testid="stSidebar"] .stButton button p,
+[data-testid="stSidebar"] .stFormSubmitButton button p,
 [data-testid="stSidebar"] [data-testid="stFileUploader"] button p { color: inherit; }
-[data-testid="stSidebar"] .stButton button:hover:not(:disabled) {
+[data-testid="stSidebar"] .stButton button:hover:not(:disabled),
+[data-testid="stSidebar"] .stFormSubmitButton button:hover:not(:disabled) {
   background: #e5f4f6; border-color: #a6cfd6; color: #113c49;
 }
 [data-testid="stSidebar"] .stButton button:disabled {
   background: #275f6b; color: #c2d8de; border-color: #477d87; opacity: 1;
 }
-[data-testid="stSidebar"] .stButton button[kind="primary"] {
+[data-testid="stSidebar"] .stButton button[kind="primary"],
+[data-testid="stSidebar"] .stFormSubmitButton button[kind="primaryFormSubmit"] {
   background: #14949e; color: #fff; border-color: #3eb1b8;
 }
-[data-testid="stSidebar"] .stButton button[kind="primary"]:hover {
+[data-testid="stSidebar"] .stButton button[kind="primary"]:hover,
+[data-testid="stSidebar"] .stFormSubmitButton button[kind="primaryFormSubmit"]:hover {
   background: #10838e; color: #fff;
 }
 [data-testid="stSidebar"] [data-testid="stFileUploader"] {
@@ -104,7 +109,9 @@ h3 { font-size: 1.1rem; }
 [data-testid="stSidebar"] [data-testid="stFileUploader"] svg { color: #416b7d; }
 [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button { color: #eaf9fa; }
 [data-testid="stSidebar"] hr { border-color: #37727d; }
-.stButton button, .stDownloadButton button { border-radius: 8px; min-height: 2.5rem; }
+.stButton button, .stDownloadButton button, .stFormSubmitButton button {
+  border-radius: 8px; min-height: 2.5rem;
+}
 button:focus-visible, input:focus-visible {
   outline: 3px solid #54bbc4; outline-offset: 2px;
 }
@@ -130,6 +137,9 @@ button:focus-visible, input:focus-visible {
 [data-testid="stChatMessage"] { background: #edf5f9; border: 1px solid #dfeaf0; border-radius: 12px; }
 [data-testid="stChatInput"] { border-color: #b9d4df; border-radius: 10px; background: #fff; }
 [data-testid="stColumn"], [data-testid="stPlotlyChart"] { min-width: 0; }
+/* Chat charts: the message body is a flex item beside the avatar. Without min-width:0 it keeps
+   Plotly's earlier, wider SVG width after a resize and the overflow is clipped (cut-off bars). */
+[data-testid="stChatMessage"] > div, [data-testid="stChatMessageContent"] { min-width: 0; max-width: 100%; }
 @container workspace (max-width: 1050px) {
   .st-key-filters [data-testid="stHorizontalBlock"],
   .st-key-metrics [data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 1rem; }
