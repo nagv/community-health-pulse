@@ -41,6 +41,15 @@ Keep answers concise, useful, and free of medical treatment advice.
 """
 
 
+# One model call may be attempted MODEL_ATTEMPTS times, each up to MODEL_TIMEOUT_S seconds.
+# The whole agent run (several model + tool calls) must finish within REQUEST_TIMEOUT_S, and the
+# frontend HTTP timeout is slightly longer than that.
+REQUEST_TIMEOUT_S = 60
+MODEL_TIMEOUT_S = 15
+MODEL_MAX_RETRIES = 1
+MODEL_ATTEMPTS = MODEL_MAX_RETRIES + 1
+
+
 class AgentFailure(Exception):
     def __init__(self, message: str, status_code: int = 502):
         self.status_code = status_code
@@ -61,8 +70,8 @@ def build_model():
         base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
         api_key=os.environ["OPENROUTER_API_KEY"],
         temperature=0,
-        max_retries=2,
-        timeout=25,
+        max_retries=MODEL_MAX_RETRIES,
+        timeout=MODEL_TIMEOUT_S,
         max_tokens=1400,
     )
 
@@ -73,7 +82,9 @@ def tool_error(exc, request):
     return None
 
 
-async def run_chat(analysis: Analysis, request: ChatRequest, *, model=None, timeout: float = 60):
+async def run_chat(
+    analysis: Analysis, request: ChatRequest, *, model=None, timeout: float = REQUEST_TIMEOUT_S
+):
     started = time.monotonic()
     session = ToolSession(analysis, request.filters)
     usage = {}
@@ -134,7 +145,9 @@ async def run_chat(analysis: Analysis, request: ChatRequest, *, model=None, time
     except AgentFailure:
         raise
     except (asyncio.TimeoutError, TimeoutError):
-        raise AgentFailure("Analysis timed out after 60 seconds. Try a narrower question.", 504) from None
+        raise AgentFailure(
+            f"Analysis timed out after {int(timeout)} seconds. Try a narrower question.", 504
+        ) from None
     except AuthenticationError:
         raise AgentFailure("OpenRouter rejected the API key. Update backend configuration.", 503) from None
     except APIConnectionError:
