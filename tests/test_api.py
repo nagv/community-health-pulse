@@ -69,3 +69,23 @@ def test_breakdown_truncation_is_explicit():
     assert response["charts"][1]["truncated"] is True
     assert response["charts"][2]["total_groups"] == 55
     assert response["summary"]["recorded_visits"] == 55
+
+
+def test_summary_endpoint_and_dataset_analysis_is_reused():
+    dataset_id = client.post("/datasets", files={"file": ("visits.csv", CSV, "text/csv")}).json()[
+        "dataset_id"
+    ]
+    stored = store.get(dataset_id)
+    analysis = stored.analysis
+    assert "age_band" in analysis.frame.columns
+    response = client.post(f"/datasets/{dataset_id}/summary", json={"localities": ["Lakeside"]})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["recorded_visits"] == 2 and body["busiest_locality"] == "Lakeside"
+    client.post(f"/datasets/{dataset_id}/analysis", json={"filters": {}})
+    assert store.get(dataset_id).analysis is analysis  # built once at load, not per request
+    assert client.post("/datasets/missing/summary", json={}).status_code == 404
+    bad = client.post(
+        f"/datasets/{dataset_id}/summary", json={"start_date": "2026-07-09", "end_date": "2026-07-01"}
+    )
+    assert bad.status_code == 422

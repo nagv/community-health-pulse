@@ -185,3 +185,10 @@ async def test_failed_tool_is_visible_without_disclosing_arguments(analysis):
     assert result.steps[0].success is False
     assert "private-injected-value" not in result.steps[0].label
     assert result.charts == []
+
+
+def test_model_retries_fit_inside_request_deadline():
+    from backend import agent
+
+    # Leave room for at least one more model call and the tool work within the deadline.
+    assert agent.MODEL_TIMEOUT_S * agent.MODEL_ATTEMPTS < agent.REQUEST_TIMEOUT_S

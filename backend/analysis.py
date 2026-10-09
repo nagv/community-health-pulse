@@ -1,6 +1,6 @@
 """Deterministic computations used by the API and the agent's tools."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 
@@ -30,8 +30,48 @@ class Analysis:
                 df = df[df[field].isin(values)]
         return df
 
+    def selected_range(self, filters: Filters) -> tuple[date, date]:
+        """The selected date window, clipped to the dataset's coverage."""
+        lo, hi = self.frame.visit_date.min(), self.frame.visit_date.max()
+        return max(filters.start_date or lo, lo), min(filters.end_date or hi, hi)
+
+    def previous_period(self, filters: Filters) -> Filters | None:
+        """Same filters over the equally long window just before the selection.
+
+        None when that window would start before the dataset does, so a partial
+        earlier window is never compared against a full one.
+        """
+        start, end = self.selected_range(filters)
+        if start > end:
+            return None
+        days = (end - start).days + 1
+        prev_end = start - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=days - 1)
+        if prev_start < self.frame.visit_date.min():
+            return None
+        return filters.model_copy(update={"start_date": prev_start, "end_date": prev_end})
+
+    @staticmethod
+    def _leader(column: pd.Series) -> tuple[str, int]:
+        counts = column.value_counts()
+        label = min(counts.index, key=lambda value: (-counts[value], str(value)))
+        return str(label), int(counts[label])
+
     def summary(self, filters: Filters):
         df = self.select(filters)
+        start, end = self.selected_range(filters)
+        range_days = max((end - start).days + 1, 0)
+        top_condition = top_share = busiest = None
+        if len(df):
+            # Ties break alphabetically, matching breakdown()'s ordering.
+            top_condition, top_count = self._leader(df.condition)
+            top_share = round(top_count / len(df) * 100, 2)
+            busiest, _ = self._leader(df.locality)
+        previous = self.previous_period(filters)
+        previous_visits = len(self.select(previous)) if previous else None
+        change_pct = (
+            round((len(df) - previous_visits) / previous_visits * 100, 2) if previous_visits else None
+        )
         return {
             "recorded_visits": len(df),
             "localities": int(df.locality.nunique()),
@@ -39,6 +79,12 @@ class Analysis:
             "date_coverage_days": (df.visit_date.max() - df.visit_date.min()).days + 1 if len(df) else 0,
             "start_date": df.visit_date.min() if len(df) else None,
             "end_date": df.visit_date.max() if len(df) else None,
+            "avg_visits_per_day": round(len(df) / range_days, 1) if range_days else 0.0,
+            "top_condition": top_condition,
+            "top_condition_share_pct": top_share,
+            "busiest_locality": busiest,
+            "previous_period_visits": previous_visits,
+            "change_pct": change_pct,
         }
 
     def breakdown(self, filters: Filters, group: str):

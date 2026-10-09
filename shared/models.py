@@ -56,6 +56,14 @@ class Summary(Contract):
     date_coverage_days: int
     start_date: date | None
     end_date: date | None
+    avg_visits_per_day: float = 0.0
+    top_condition: str | None = None
+    top_condition_share_pct: float | None = None
+    busiest_locality: str | None = None
+    # Same-length window immediately before the selection; None if it predates the dataset.
+    previous_period_visits: int | None = None
+    # None when there is no earlier window or its baseline is zero (undefined percentage).
+    change_pct: float | None = None
 
 
 class ChartSpec(Contract):

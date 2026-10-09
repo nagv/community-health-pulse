@@ -101,3 +101,35 @@ def test_extreme_date_filters_are_clipped_to_dataset():
     f = Filters(start_date=date.min, end_date=date.max)
     assert sum(row["visits"] for row in a.trend(f, "weekly")) == 4
     assert a.trend(Filters(start_date=date(2500, 1, 1), end_date=date.max), "daily") == []
+
+
+def test_summary_headline_fields_break_ties_alphabetically():
+    frame, _ = validate_csv(CSV)
+    summary = Analysis(frame).summary(Filters())
+    assert summary["avg_visits_per_day"] == 0.5  # 4 visits over 1-8 July
+    assert (summary["top_condition"], summary["top_condition_share_pct"]) == ("Respiratory", 50.0)
+    assert summary["busiest_locality"] == "Lakeside"  # 2-2 tie with Northstead
+
+
+@pytest.mark.parametrize(
+    "start,end,previous,change",
+    [
+        (None, None, None, None),  # earlier window would predate the dataset
+        (date(2026, 7, 2), date(2026, 7, 8), None, None),
+        (date(2026, 7, 5), date(2026, 7, 8), 2, 0.0),  # 1-4 July vs 5-8 July
+        (date(2026, 7, 7), date(2026, 7, 8), 0, None),  # zero baseline: change undefined
+    ],
+)
+def test_summary_previous_period(start, end, previous, change):
+    frame, _ = validate_csv(CSV)
+    summary = Analysis(frame).summary(Filters(start_date=start, end_date=end))
+    assert summary["previous_period_visits"] == previous
+    assert summary["change_pct"] == change
+
+
+def test_previous_period_keeps_other_filters():
+    frame, _ = validate_csv(CSV)
+    f = Filters(start_date=date(2026, 7, 5), end_date=date(2026, 7, 8), localities=["Lakeside"])
+    previous = Analysis(frame).previous_period(f)
+    assert (previous.start_date, previous.end_date) == (date(2026, 7, 1), date(2026, 7, 4))
+    assert previous.localities == ["Lakeside"]

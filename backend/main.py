@@ -7,7 +7,6 @@ from typing import Annotated
 from fastapi import FastAPI, File, HTTPException, Response, UploadFile
 
 from backend.agent import AgentFailure, configured, run_chat
-from backend.analysis import Analysis
 from backend.data import MAX_BYTES, DatasetStore, InvalidDataset, sample_csv
 from shared.models import (
     ChartSpec,
@@ -16,6 +15,8 @@ from shared.models import (
     DashboardRequest,
     DashboardResponse,
     DatasetInfo,
+    Filters,
+    Summary,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
@@ -64,7 +65,7 @@ def delete_dataset(dataset_id: str):
 
 @app.post("/datasets/{dataset_id}/analysis", response_model=DashboardResponse)
 def dashboard(dataset_id: str, request: DashboardRequest):
-    analysis = Analysis(get_dataset(dataset_id).frame)
+    analysis = get_dataset(dataset_id).analysis
     f = request.filters
     all_conditions = analysis.breakdown(f, "condition")
     conditions = all_conditions[:50]
@@ -114,9 +115,15 @@ def dashboard(dataset_id: str, request: DashboardRequest):
     )
 
 
+@app.post("/datasets/{dataset_id}/summary", response_model=Summary)
+def summary(dataset_id: str, filters: Filters):
+    """Headline numbers only: cheaper than /analysis for views that don't need charts or records."""
+    return get_dataset(dataset_id).analysis.summary(filters)
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    analysis = Analysis(get_dataset(request.dataset_id).frame)
+    analysis = get_dataset(request.dataset_id).analysis
     try:
         return await run_chat(analysis, request)
     except AgentFailure as exc:

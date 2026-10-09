@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pandas as pd
 
+from backend.analysis import Analysis
 from shared.models import DatasetInfo, ValidationReport
 
 COLUMNS = ["visit_id", "visit_date", "locality", "age", "gender", "condition"]
@@ -119,6 +120,12 @@ class StoredDataset:
     frame: pd.DataFrame
     info: DatasetInfo
     last_used: float
+    # Built once at load time (derives age_band) and reused by every dashboard and chat request.
+    analysis: Analysis | None = None
+
+    def __post_init__(self):
+        if self.analysis is None:
+            self.analysis = Analysis(self.frame)
 
 
 class DatasetStore:
