@@ -79,3 +79,13 @@ def test_network_failures(monkeypatch, error, status, message):
         client.api("GET", "/health")
     assert exc.value.status_code == status
     assert message in str(exc.value)
+
+
+def test_token_header_sent_only_when_configured(monkeypatch):
+    calls = respond(monkeypatch, httpx.Response(200, json={}, request=REQUEST))
+    monkeypatch.delenv("BACKEND_API_TOKEN", raising=False)
+    client.api("GET", "/health")
+    monkeypatch.setenv("BACKEND_API_TOKEN", "s3cret")
+    client.api("GET", "/health")
+    assert calls[0][2]["headers"] is None
+    assert calls[1][2]["headers"] == {"X-API-Token": "s3cret"}

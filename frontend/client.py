@@ -24,8 +24,10 @@ class ApiError(Exception):
 
 def api(method: str, path: str, **kwargs):
     base = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
+    token = os.getenv("BACKEND_API_TOKEN")
+    headers = {"X-API-Token": token} if token else None
     try:
-        response = httpx.request(method, base + path, timeout=HTTP_TIMEOUT_S, **kwargs)
+        response = httpx.request(method, base + path, headers=headers, timeout=HTTP_TIMEOUT_S, **kwargs)
     except httpx.TimeoutException:
         raise ApiError("The backend took too long to respond. Please try again.", 504) from None
     except httpx.RequestError:

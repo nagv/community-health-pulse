@@ -1,10 +1,12 @@
 """Run with: python -m uvicorn backend.main:app --port 8000 (repository root)."""
 
+import hmac
 import logging
+import os
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Response, UploadFile
 
 from backend.agent import AgentFailure, configured, run_chat
 from backend.data import MAX_BYTES, DatasetStore, InvalidDataset, sample_csv
@@ -24,6 +26,16 @@ store = DatasetStore()
 app = FastAPI(title="Community Health Pulse API", version="0.1.0")
 
 
+def require_token(x_api_token: Annotated[str | None, Header()] = None):
+    """When BACKEND_API_TOKEN is set (any public deployment), every data route requires it."""
+    expected = os.getenv("BACKEND_API_TOKEN", "")
+    if expected and not hmac.compare_digest((x_api_token or "").encode(), expected.encode()):
+        raise HTTPException(401, "Missing or invalid API token.")
+
+
+protected = [Depends(require_token)]
+
+
 def get_dataset(dataset_id: str):
     try:
         return store.get(dataset_id)
@@ -36,7 +48,7 @@ def health():
     return {"status": "ok", "agent_configured": configured(), "storage": "in-memory"}
 
 
-@app.post("/datasets", response_model=DatasetInfo, status_code=201)
+@app.post("/datasets", response_model=DatasetInfo, status_code=201, dependencies=protected)
 async def upload(file: Annotated[UploadFile, File()]):
     try:
         payload = await file.read(MAX_BYTES + 1)
@@ -47,23 +59,23 @@ async def upload(file: Annotated[UploadFile, File()]):
         await file.close()
 
 
-@app.post("/datasets/sample", response_model=DatasetInfo, status_code=201)
+@app.post("/datasets/sample", response_model=DatasetInfo, status_code=201, dependencies=protected)
 def load_sample():
     return store.add(sample_csv(), "Synthetic clinic visits — 90 days", synthetic=True)
 
 
-@app.get("/datasets/{dataset_id}", response_model=DatasetInfo)
+@app.get("/datasets/{dataset_id}", response_model=DatasetInfo, dependencies=protected)
 def metadata(dataset_id: str):
     return get_dataset(dataset_id).info
 
 
-@app.delete("/datasets/{dataset_id}", status_code=204)
+@app.delete("/datasets/{dataset_id}", status_code=204, dependencies=protected)
 def delete_dataset(dataset_id: str):
     store.delete(dataset_id)
     return Response(status_code=204)
 
 
-@app.post("/datasets/{dataset_id}/analysis", response_model=DashboardResponse)
+@app.post("/datasets/{dataset_id}/analysis", response_model=DashboardResponse, dependencies=protected)
 def dashboard(dataset_id: str, request: DashboardRequest):
     analysis = get_dataset(dataset_id).analysis
     f = request.filters
@@ -115,13 +127,13 @@ def dashboard(dataset_id: str, request: DashboardRequest):
     )
 
 
-@app.post("/datasets/{dataset_id}/summary", response_model=Summary)
+@app.post("/datasets/{dataset_id}/summary", response_model=Summary, dependencies=protected)
 def summary(dataset_id: str, filters: Filters):
     """Headline numbers only: cheaper than /analysis for views that don't need charts or records."""
     return get_dataset(dataset_id).analysis.summary(filters)
 
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat", response_model=ChatResponse, dependencies=protected)
 async def chat(request: ChatRequest):
     analysis = get_dataset(request.dataset_id).analysis
     try:

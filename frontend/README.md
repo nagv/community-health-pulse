@@ -11,4 +11,4 @@ Container build from repository root:
 ```text
 docker build -f frontend/Dockerfile -t health-pulse-frontend .
 ```
-Set BACKEND_URL in the hosting environment. Streamlit calls the API from its server, so browser CORS configuration is unnecessary for this setup.
+Set BACKEND_URL (and BACKEND_API_TOKEN, matching the backend) in the hosting environment or Streamlit secrets. Streamlit calls the API from its server, so browser CORS configuration is unnecessary for this setup.

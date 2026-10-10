@@ -89,3 +89,21 @@ def test_summary_endpoint_and_dataset_analysis_is_reused():
         f"/datasets/{dataset_id}/summary", json={"start_date": "2026-07-09", "end_date": "2026-07-01"}
     )
     assert bad.status_code == 422
+
+
+def test_token_required_when_configured_but_health_stays_open(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_TOKEN", "s3cret")
+    assert client.get("/health").status_code == 200
+    assert client.post("/datasets/sample").status_code == 401
+    assert client.post("/datasets/sample", headers={"X-API-Token": "wrong"}).status_code == 401
+    assert client.post("/chat", json={}).status_code == 401
+    created = client.post("/datasets/sample", headers={"X-API-Token": "s3cret"})
+    assert created.status_code == 201
+    store.delete(created.json()["dataset_id"])
+
+
+def test_no_token_configured_keeps_routes_open(monkeypatch):
+    monkeypatch.delenv("BACKEND_API_TOKEN", raising=False)
+    created = client.post("/datasets/sample")
+    assert created.status_code == 201
+    store.delete(created.json()["dataset_id"])
